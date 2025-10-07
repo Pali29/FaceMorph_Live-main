@@ -8,7 +8,7 @@ class Triangulator():
         self.points = points
 
 
-    def rect_contains(rect, point):
+    def rect_contains(self, rect, point):
         x, y, w, h = rect
         px, py = point
         return x<=px<=x+w and y<=py<=y+h
@@ -17,6 +17,7 @@ class Triangulator():
     def get_triangles(self, rect, points):
         rect_area = cv2.Subdiv2D(rect)
         for point in points:
+            point = tuple(map(float, point))
             rect_area.insert(point)
         
         triangle_list = rect_area.getTriangleList()
@@ -25,19 +26,23 @@ class Triangulator():
         index_triangles = []
 
         for t in triangle_list:
-            pts = [(t[0], t[1]), (t[2], t[3]), (t[4], t[5])]
 
-            if not (self.rect_contains(rect, (t[0], t[1])) and self.rect_contains(rect, (t[2], t[3])) and self.rect_contains(rect, (t[4], t[5]))):
+            pt1 = (t[0], t[1])
+            pt2 = (t[2], t[3])
+            pt3 = (t[4], t[5])
+
+            if not (self.rect_contains(rect, pt1) and self.rect_contains(rect, pt2) and self.rect_contains(rect, pt3)):
                 continue
 
             indices = []
+            pts = [(t[0], t[1]), (t[2], t[3]), (t[4], t[5])]
 
             for pt in pts:
                 min_dist = float('inf')
                 index = -1
 
                 for i, landmark in enumerate(points):
-                    dist = np.linalg.norm(np.array(pt) - np.arrya(landmark))
+                    dist = np.linalg.norm(np.array(pt) - np.array(landmark))
                     if dist < min_dist:
                         min_dist = dist
                         index = i
@@ -61,3 +66,5 @@ class Triangulator():
             cv2.line(img, pt2, pt1, (0,200,0), 1)
             cv2.line(img, pt3, pt2, (0,200,0), 1)
             cv2.line(img, pt1, pt3, (0,200,0), 1)
+        
+        return img
