@@ -11,8 +11,8 @@ class FaceMorpher:
 
     
     def warp_triangle(self, img, t_in, t_out):
-        t_in = np.array(float(t_in))
-        t_out = np.array(float(t_out))
+        t_in = np.array(t_in, dtype=np.float32)
+        t_out = np.array(t_out, dtype=np.float32)
 
         r_in = cv2.boundingRect(t_in)
         r_out = cv2.boundingRect(t_out)
@@ -28,3 +28,18 @@ class FaceMorpher:
         warped_patch = cv2.warpAffine(img_crop, warp_mat, (r_out[2], r_out[3]), flags= cv2.INTER_LINEAR, borderMode= cv2.BORDER_REFLECT_101)
         
         return warped_patch, mask, r_out
+    
+
+    def morph_triangle(self, img1, img2, img_morph, t1, t2, t, alpha):
+        warp1, mask1, r1 = self.warp_triangle(img1, t1, t)
+        warp2, mask2, r2 = self.warp_triangle(img2, t2, t)
+
+        blended_patch = cv2.addWeighted(warp1, 1-alpha, warp2, alpha, 0)
+        blended_patch = blended_patch.astype(img_morph.dtype)
+        
+        x,y,w,h = r1
+        roi = img_morph[y:y+h, x:x+w]
+
+        mask_out = cv2.merge([mask1, mask1, mask1]) if len(img_morph.shape) == 3 else mask1
+
+        img_morph[y:y+h, x:x+w] = roi * (1-mask_out/255.0) + blended_patch * (mask_out/255.0)
