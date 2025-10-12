@@ -38,8 +38,44 @@ class FaceMorpher:
         blended_patch = blended_patch.astype(img_morph.dtype)
         
         x,y,w,h = r1
+        x = max(x, 0)
+        y = max(y, 0)
         roi = img_morph[y:y+h, x:x+w]
 
         mask_out = cv2.merge([mask1, mask1, mask1]) if len(img_morph.shape) == 3 else mask1
 
         img_morph[y:y+h, x:x+w] = roi * (1-mask_out/255.0) + blended_patch * (mask_out/255.0)
+
+
+    def get_morphed_face(self, src_img, dst_img, src_points, dst_points, alpha):
+        morphed_img = np.zeros_like(src_img, dtype=np.uint8)
+
+        alpha = np.clip(alpha, 0.0, 1.0)
+
+        interpolated_points = []
+        for i in range(len(src_points)):
+            x = (1 - alpha) * src_points[i][0] + alpha * dst_points[i][0]
+            y = (1 - alpha) * src_points[i][1] + alpha * dst_points[i][1]
+            interpolated_points.append((x, y))
+
+        interpolated_points = np.array(interpolated_points, dtype=np.float32)
+
+        triangles = self.triangulator.get_triangles(interpolated_points)
+
+        for tri_indices in triangles:
+            x, y, z = tri_indices
+
+            t1 = [src_points[x], src_points[y], src_points[z]]
+            t2 = [dst_points[x], dst_points[y], dst_points[z]]
+            t = [interpolated_points[x], interpolated_points[y], interpolated_points[z]]
+
+            self.morph_triangle(src_img, dst_img, morphed_img, t1, t2, t, alpha)
+
+        return morphed_img
+    
+
+    def blend_faces(self, face1, face2, alpha):
+        blended_face = cv2.addWeighted(face1, 1-alpha, face2, alpha, 0)
+        blended_face = blended_face.astype(np.uint8)
+
+        return blended_face
