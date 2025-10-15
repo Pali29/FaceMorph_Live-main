@@ -30,7 +30,7 @@ class FaceTracker:
         self.video = cv2.VideoCapture(self.cam_index)
         ret, frame = self.video.read()
         if not ret:
-            raise RuntimeError("❌ Could not read from webcam.")
+            raise RuntimeError("Could not read from webcam.")
         self.height, self.width, _ = frame.shape
 
         # Initialize Virtual Camera
@@ -40,7 +40,7 @@ class FaceTracker:
             fps=self.fps,
             device=self.virt_cam_device,
         )
-        print(f"✅ Using virtual camera: {self.cam.device}")
+        print(f"Using virtual camera: {self.cam.device}")
 
     def process_frame(self, frame):
         """Detect landmarks and draw them."""
@@ -58,7 +58,6 @@ class FaceTracker:
         return rgb
 
     def run(self):
-        """Start the real-time face tracking and virtual cam stream."""
         while True:
             ret, frame = self.video.read()
             if not ret:
@@ -69,7 +68,7 @@ class FaceTracker:
             self.cam.sleep_until_next_frame()
 
         self.video.release()
-        print("🟡 Stream ended.")
+        print("Stream ended.")
 
 
 if __name__ == "__main__":

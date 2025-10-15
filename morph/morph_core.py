@@ -6,8 +6,8 @@ from morph.utils import FaceUtils
 
 class FaceMorpher:
     def __init__(self):
-        self.utils = FaceUtils()
-        self.triangulator = Triangulator()
+        self.utils = FaceUtils
+        self.triangulator = Triangulator
 
     
     def warp_triangle(self, img, t_in, t_out):
@@ -23,6 +23,14 @@ class FaceMorpher:
         img_crop = img[r_in[1]:r_in[1]+r_in[3], r_in[0]:r_in[0]+r_in[2]]
         mask = np.zeros((r_out[3], r_out[2]), dtype=np.uint8)
         cv2.fillConvexPoly(mask, np.int32(t_out_offset), 255)
+
+        t_in_offset = np.array(t_in_offset, dtype=np.float32)
+        t_out_offset = np.array(t_out_offset, dtype=np.float32)
+
+        # skip degenerate triangles
+        if t_in.shape[0] != 3 or t_out.shape[0] != 3:
+            return np.zeros((0,0), dtype=np.uint8), np.zeros((0,0), dtype=np.uint8), (0,0,0,0)
+
 
         warp_mat = cv2.getAffineTransform(t_in_offset, t_out_offset)
         warped_patch = cv2.warpAffine(img_crop, warp_mat, (r_out[2], r_out[3]), flags= cv2.INTER_LINEAR, borderMode= cv2.BORDER_REFLECT_101)
@@ -48,7 +56,7 @@ class FaceMorpher:
 
 
     def get_morphed_face(self, src_img, dst_img, src_points, dst_points, alpha):
-        morphed_img = np.zeros_like(src_img, dtype=np.uint8)
+        morphed_img = src_img.astype(np.uint8)
 
         alpha = np.clip(alpha, 0.0, 1.0)
 
@@ -60,7 +68,11 @@ class FaceMorpher:
 
         interpolated_points = np.array(interpolated_points, dtype=np.float32)
 
-        triangles = self.triangulator.get_triangles(interpolated_points)
+        h, w = morphed_img.shape[:2]
+        morphed_img_rect = (0, 0, h, w)
+
+        triangulater = self.triangulator(morphed_img_rect, interpolated_points)
+        triangles = triangulater.get_triangles(morphed_img_rect, interpolated_points)
 
         for tri_indices in triangles:
             x, y, z = tri_indices
