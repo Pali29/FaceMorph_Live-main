@@ -56,7 +56,8 @@ class FaceMorpher:
 
 
     def get_morphed_face(self, src_img, dst_img, src_points, dst_points, alpha):
-        morphed_img = src_img.astype(np.uint8)
+        # morphed_img = src_img.astype(np.uint8)
+        morphed_img = np.zeros_like(src_img, dtype=np.uint8)
 
         alpha = np.clip(alpha, 0.0, 1.0)
 

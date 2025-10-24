@@ -12,8 +12,8 @@ def test_static_morph():
     morpher = FaceMorpher()
 
     # Load images (make sure both are same size or will be resized)
-    src_path = "assets/source.png"
-    dst_path = "assets/target.png"
+    src_path = "assets/faces/source.jpeg"
+    dst_path = "assets/faces/target.jpeg"
 
     src_img = cv2.imread(src_path)
     dst_img = cv2.imread(dst_path)
