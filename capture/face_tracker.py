@@ -70,6 +70,15 @@ class FaceTracker:
         self.video.release()
         print("Stream ended.")
 
+    def read(self):
+        """Read a single frame from the webcam."""
+        if not hasattr(self, "video") or self.video is None:
+            return None
+        ret, frame = self.video.read()
+        if not ret:
+            return None
+        return frame
+
 
 if __name__ == "__main__":
     tracker = FaceTracker()
