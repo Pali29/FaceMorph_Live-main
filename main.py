@@ -8,7 +8,6 @@ import numpy as np
 
 
 faceutils = FaceUtils()
-facetracker = FaceTracker()
 
 def init_components():
     target_path = "assets/faces/source.jpeg"
@@ -25,15 +24,16 @@ def init_components():
         raise RuntimeError("Face Not Detected")
 
     try:
-        tracker = facetracker(cam_index=0, virt_cam_device="/dev/video10", fps=30)
+        tracker = FaceTracker()
         print("Tracker Initialised")
     except Exception as e:
-        raise RuntimeError("Could Not initialize face tracker")
+        # raise RuntimeError("Could Not initialize face tracker")
+        print(e)
     
     morph_engine = FaceMorpher()
 
     print("Components Initialised")
-    return tracker, target_points, morph_engine
+    return tracker, target_img, target_points, morph_engine
 
 
 def morph_live_frame(frame, target_img, target_points, morph_engine, alpha):
@@ -65,7 +65,7 @@ def run_live_morph(tracker, target_img, target_points, morph_engine, virt_cam_de
     height, width = frame.shape[:2]
 
     try:
-        with pyvirtualcam.camera(width = width, height = height, fps = fps, device = virt_cam_devices) as cam:
+        with pyvirtualcam.Camera(width = width, height = height, fps = fps, device = virt_cam_devices) as cam:
             alpha = 0.5
             while True:
                 frame = tracker.read()
@@ -81,7 +81,8 @@ def run_live_morph(tracker, target_img, target_points, morph_engine, virt_cam_de
                     break
 
     except Exception as e:
-        print("Virtual cam failed")
+        # print("Virtual cam failed")
+        print(e)
 
     finally:
         cv2.destroyAllWindows
@@ -96,9 +97,9 @@ def main():
     except Exception as e:
         print(e)
     
-    finally:
-        if "tracker" in locals() and tracker is not None:
-            tracker.release()
+    # finally:
+    #     if "tracker" in locals() and tracker is not None:
+    #         tracker.release()
     
 
 if __name__ == "__main__":
