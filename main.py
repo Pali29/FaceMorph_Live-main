@@ -103,11 +103,12 @@ def run_live_morph(tracker, target_img, target_points, morph_engine, virt_cam_de
                 except Exception as e:
                     logger.error(f"Failed to send frame to virtual camera: {e}")
 
-                cam.sleep_until_next_frame()
-
                 # allow ESC to break
                 if cv2.waitKey(1) & 0xFF == 27:
+                    logger.info("ESC pressed, exiting...")
                     break
+
+                cam.sleep_until_next_frame()
 
     except Exception as e:
         logger.error(f"Virtual cam error: {e}")
