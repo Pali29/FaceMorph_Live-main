@@ -63,8 +63,8 @@ class FaceMorpher:
 
 
     def get_morphed_face(self, src_img, dst_img, src_points, dst_points, alpha):
-        # morphed_img = dst_img.astype(np.uint8)
-        morphed_img = np.zeros_like(dst_img, dtype=np.uint8)
+        morphed_img = src_img.astype(np.uint8)
+        # morphed_img = np.zeros_like(dst_img, dtype=np.uint8)
 
         alpha = np.clip(alpha, 0.0, 1.0)
         logger.info(f"get_morphed_face: alpha={alpha} src_points={len(src_points)} dst_points={len(dst_points)}")

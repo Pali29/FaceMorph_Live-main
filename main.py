@@ -15,7 +15,7 @@ logger = logging.getLogger('vibe')
 faceutils = FaceUtils()
 
 def init_components():
-    target_path = "assets/faces/source.jpeg"
+    target_path = "assets/Test1.jpg"
     if not os.path.exists(target_path):
         raise FileNotFoundError("no target detected")
     
@@ -77,6 +77,10 @@ def run_live_morph(tracker, target_img, target_points, morph_engine, virt_cam_de
     height, width = frame.shape[:2]
 
     try:
+        # Create a small window to capture keyboard events
+        cv2.namedWindow('Press ESC to exit', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('Press ESC to exit', 400, 100)
+        
         with pyvirtualcam.Camera(width = width, height = height, fps = fps, device = virt_cam_devices) as cam:
             alpha = 0.5
             while True:
@@ -103,11 +107,11 @@ def run_live_morph(tracker, target_img, target_points, morph_engine, virt_cam_de
                 except Exception as e:
                     logger.error(f"Failed to send frame to virtual camera: {e}")
 
-                # allow ESC to break
+                # Check for ESC key (must have a window open for this to work)
                 if cv2.waitKey(1) & 0xFF == 27:
                     logger.info("ESC pressed, exiting...")
                     break
-
+                    
                 cam.sleep_until_next_frame()
 
     except Exception as e:

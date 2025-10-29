@@ -1,17 +1,25 @@
 import cv2
 
-# Open the default webcam (0 = first camera)
-cap = cv2.VideoCapture(1)
+# Initialize webcam (0 = default camera)
+cam = cv2.VideoCapture(1)
 
-# Read one frame to make sure it's initialized
-ret, frame = cap.read()
+# Check if the webcam is opened correctly
+if not cam.isOpened():
+    print("Error: Cannot access webcam")
+    exit()
+
+# Read a single frame
+ret, frame = cam.read()
 
 if ret:
-    # Get frame dimensions
-    height, width, channels = frame.shape
-    print(f"Webcam frame size: {width} x {height} pixels")
+    # Save the captured image
+    cv2.imwrite("assets/Test1.jpg", frame)
+    print("Image captured and saved as Test1.jpg")
 else:
-    print("Failed to capture frame.")
+    print("Error: Failed to capture image")
 
-# Release camera
-cap.release()
+# Release the webcam
+cam.release()
+
+# Close all OpenCV windows (optional)
+cv2.destroyAllWindows()
