@@ -4,7 +4,12 @@ from morph.morph_core import FaceMorpher
 import cv2
 import os
 import pyvirtualcam
-import numpy as np
+import threading
+import logging
+
+# basic logger for diagnostics
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s: %(message)s')
+logger = logging.getLogger('vibe')
 
 
 faceutils = FaceUtils()
@@ -17,7 +22,7 @@ def init_components():
     target_img = cv2.imread(target_path)
     if target_img is None:
         raise ValueError("Error reading Image")
-    target_img = cv2.cvtColor(target_img, cv2.COLOR_BGR2RGB)
+    # keep as BGR here; FaceUtils.get_landmarks expects BGR and will convert internally
 
     target_points = faceutils.get_landmarks(target_img)
     if target_points is None or len(target_points)==0:
@@ -25,34 +30,41 @@ def init_components():
 
     try:
         tracker = FaceTracker()
-        print("Tracker Initialised")
+        logger.info("Tracker initialised")
     except Exception as e:
-        # raise RuntimeError("Could Not initialize face tracker")
-        print(e)
+        # If tracker cannot initialize we'll raise so the caller handles it
+        logger.error(f"Tracker init error: {e}")
+        tracker = None
+
+    if tracker is None:
+        raise RuntimeError("Could not initialize FaceTracker")
     
     morph_engine = FaceMorpher()
 
-    print("Components Initialised")
+    logger.info("Components Initialised")
     return tracker, target_img, target_points, morph_engine
 
 
 def morph_live_frame(frame, target_img, target_points, morph_engine, alpha):
     try:
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-        src_points = faceutils.get_landmarks(frame_rgb)
+        # leave frame in BGR; FaceUtils.get_landmarks expects BGR and will convert internally
+        src_points = faceutils.get_landmarks(frame)
         if src_points is None or len(src_points)==0:
             return frame
         
         if len(src_points) != len(target_points):
+            # Landmark count mismatch — cannot reliably morph. Log counts for debugging.
+            logger.warning(f"Landmark count mismatch: src={len(src_points)} target={len(target_points)}")
             return frame
-        
-        morphed = morph_engine.morph(frame_rgb, target_img, src_points, target_points, alpha)
+        # FaceMorpher provides get_morphed_face (not .morph)
+        morphed = morph_engine.get_morphed_face(frame, target_img, src_points, target_points, alpha)
 
-        morphed_bgr = cv2.cvtColor(morphed, cv2.COLOR_RGB2BGR)
-        return morphed_bgr
+        # get_morphed_face returns an image with the same color ordering as inputs (BGR here)
+        return morphed
     
     except Exception as e:
+        print(e)
+        print("Morphing not done")
         return frame
     
 
@@ -72,20 +84,58 @@ def run_live_morph(tracker, target_img, target_points, morph_engine, virt_cam_de
                 if frame is None:
                     continue
 
+                # worker = threading.Thread(target=task, args=(cam, frame, target_img, target_points, morph_engine, alpha), daemon=True)
+                # worker.start()
+
                 morphed_frame = morph_live_frame(frame, target_img, target_points, morph_engine, alpha)
-                
-                cam.send(morphed_frame)
+
+                # pyvirtualcam expects RGB frames by default; convert from BGR
+                try:
+                    send_frame = cv2.cvtColor(morphed_frame, cv2.COLOR_BGR2RGB)
+                except Exception:
+                    send_frame = morphed_frame
+
+                # log before sending the frame
+                try:
+                    logger.debug(f"Sending frame to virtual camera, shape={getattr(send_frame, 'shape', None)}")
+                    cam.send(send_frame)
+                    logger.debug("Frame sent to virtual camera")
+                except Exception as e:
+                    logger.error(f"Failed to send frame to virtual camera: {e}")
+
                 cam.sleep_until_next_frame()
 
-                if cv2.waitkey(1) & 0XFF == 27:
+                # allow ESC to break
+                if cv2.waitKey(1) & 0xFF == 27:
                     break
 
     except Exception as e:
-        # print("Virtual cam failed")
-        print(e)
+        logger.error(f"Virtual cam error: {e}")
 
     finally:
-        cv2.destroyAllWindows
+        cv2.destroyAllWindows()
+
+
+
+def task(cam, frame, target_img, target_points, morph_engine, alpha):
+    morphed_frame = morph_live_frame(frame, target_img, target_points, morph_engine, alpha)
+
+    # pyvirtualcam expects RGB frames by default; convert from BGR
+    try:
+        send_frame = cv2.cvtColor(morphed_frame, cv2.COLOR_BGR2RGB)
+    except Exception:
+        send_frame = morphed_frame
+
+    # log before sending the frame
+    try:
+        logger.debug(f"Sending frame to virtual camera, shape={getattr(send_frame, 'shape', None)}")
+        cam.send(send_frame)
+        logger.debug("Frame sent to virtual camera")
+    except Exception as e:
+        logger.error(f"Failed to send frame to virtual camera: {e}")
+
+    # cam.sleep_until_next_frame()
+
 
 
 def main():
@@ -103,4 +153,6 @@ def main():
     
 
 if __name__ == "__main__":
+    from misc.linux_cam_start import linux
+    linux()
     main()

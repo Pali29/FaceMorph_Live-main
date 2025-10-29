@@ -1,6 +1,9 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import logging
+
+logger = logging.getLogger('triangulator')
 
 class Triangulator():
     def __init__(self, rect, points):
@@ -47,13 +50,18 @@ class Triangulator():
                         min_dist = dist
                         index = i
 
-                if min_dist < 1.0:
+                # Accept a nearest landmark if it's reasonably close to the triangle vertex.
+                # 1.0 px is too strict on many images; use a looser threshold (pixels).
+                if min_dist < 20.0:
                     indices.append(index)
                 
             if len(indices) == 3:
                 if len(set(indices)) == 3:
                     index_triangles.append(tuple(indices))
 
+        logger.info(f"get_triangles: found {len(index_triangles)} triangles")
+        if len(index_triangles) == 0:
+            logger.warning("get_triangles: no triangles produced by Subdiv2D; check rect/points")
         return index_triangles
     
     
