@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 from morph.morph_core import FaceMorpher
 from morph.utils import FaceUtils
-import mediapipe as mp
 import pyvirtualcam as pvc
 
 
@@ -45,56 +44,80 @@ def test_static_morph():
 
 
 
-def test_cam_morph(self, cam_index=1, virt_cam_device="/dev/video10", fps=30):
-    self.cam_index = cam_index
-    self.virt_cam_device = virt_cam_device
-    self.fps = fps
-
-    # Initialize Mediapipe Face Mesh
-    self.mp_face_mesh = mp.solutions.face_mesh
-    self.face_mesh = self.mp_face_mesh.FaceMesh(
-        static_image_mode=False,
-        max_num_faces=1,
-        refine_landmarks=True,
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5,
-    )
-
-    self.drawing_utils = mp.solutions.drawing_utils
-    self.draw_specs = self.drawing_utils.DrawingSpec(
-        thickness=1, circle_radius=1, color=(0, 200, 0)
-    )
-
-    # Initialize Webcam
-    self.video = cv2.VideoCapture(self.cam_index)
-    ret, frame = self.video.read()
-    if not ret:
-        raise RuntimeError("Could not read from webcam.")
-    self.height, self.width, _ = frame.shape
-
-    # Initialize Virtual Camera
-    self.cam = pvc.Camera(
-        width=self.width,
-        height=self.height,
-        fps=self.fps,
-        device=self.virt_cam_device,
-    )
-    print(f"Using virtual camera: {self.cam.device}")
-
+def test_cam_morph(cam_index=0, virt_cam_device="/dev/video10", fps=30):
+    # Initialize components
     utils = FaceUtils()
     morpher = FaceMorpher()
-
-    dst_img = "assets/faces/source.png"
     
-    while True:
-        ret, frame = self.video.read()
-        if not ret:
-            break
+    # Load target image
+    target_path = "assets/faces/target.jpeg"
+    target_img = cv2.imread(target_path)
+    if target_img is None:
+        print("[ERROR] Could not load target image.")
+        return
+        
+    # Get target landmarks
+    target_points = utils.get_landmarks(target_img)
+    if target_points is None:
+        print("[ERROR] Could not detect face in target image.")
+        return
+    
+    # Initialize webcam
+    video = cv2.VideoCapture(cam_index)
+    ret, frame = video.read()
+    if not ret:
+        raise RuntimeError("Could not read from webcam.")
+    height, width = frame.shape[:2]
 
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.face_mesh.process(rgb)
+    try:
+        # Create window for keyboard events
+        cv2.namedWindow('Press ESC to exit', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('Press ESC to exit', 400, 100)
+        
+        # Initialize virtual camera
+        with pvc.Camera(width=width, height=height, fps=fps, device=virt_cam_device) as cam:
+            print(f"Using virtual camera: {cam.device}")
+            
+            alpha = 0.5  # Morphing factor
+            while True:
+                ret, frame = video.read()
+                if not ret:
+                    continue
+                
+                # Get landmarks for current frame
+                src_points = utils.get_landmarks(frame)
+                if src_points is not None and len(src_points) == len(target_points):
+                    # Perform morphing
+                    morphed_frame = morpher.get_morphed_face(frame, target_img, src_points, target_points, alpha)
+                else:
+                    morphed_frame = frame
+                
+                # Convert to RGB for virtual camera
+                try:
+                    send_frame = cv2.cvtColor(morphed_frame, cv2.COLOR_BGR2RGB)
+                except Exception:
+                    send_frame = morphed_frame
+                
+                # Send frame to virtual camera
+                cam.send(send_frame)
+                
+                # Check for ESC key
+                if cv2.waitKey(1) & 0xFF == 27:
+                    break
+                    
+                cam.sleep_until_next_frame()
+                
+    finally:
+        video.release()
+        cv2.destroyAllWindows()
 
 
 
 if __name__ == "__main__":
+    print("Testing static morphing...")
     test_static_morph()
+    
+    print("\nTesting live camera morphing...")
+    from misc.linux_cam_start import linux
+    linux()  # Setup virtual camera on Linux
+    test_cam_morph()

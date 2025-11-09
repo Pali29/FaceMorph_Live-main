@@ -138,15 +138,95 @@ def run_live_morph(tracker, target_img, target_points, morph_engine, virt_cam_de
 
 
 # ----------------- Entry Point -----------------
+def morph_video(source_path="assets/faces/source.jpeg", video_path="input_video.mp4", output_path="morphed_output.mp4", alpha=0.5):
+    # Initialize components
+    faceutils = FaceUtils()
+    morph_engine = FaceMorpher()
+
+    # Load source image
+    if not os.path.exists(source_path):
+        raise FileNotFoundError("Source image not found")
+    source_img = cv2.imread(source_path)
+    if source_img is None:
+        raise ValueError("Error reading source image")
+    
+    # Get source landmarks
+    source_points = faceutils.get_landmarks(source_img)
+    if source_points is None or len(source_points) == 0:
+        raise RuntimeError("Face not detected in source image")
+
+    # Open video
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise RuntimeError("Could not open video file")
+
+    # Get video properties
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    # Create video writer
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+    try:
+        frame_count = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            # Update progress
+            frame_count += 1
+            if frame_count % 30 == 0:  # Show progress every 30 frames
+                progress = (frame_count / total_frames) * 100
+                print(f"Processing: {progress:.1f}% complete")
+
+            try:
+                # Get landmarks for current frame
+                frame_points = faceutils.get_landmarks(frame)
+                
+                if frame_points is not None and len(frame_points) == len(source_points):
+                    # Perform morphing
+                    morphed = morph_engine.get_morphed_face(frame, source_img, frame_points, source_points, alpha)
+                    out.write(morphed)
+                else:
+                    # If no face detected, write original frame
+                    out.write(frame)
+                
+                # Display preview (optional)
+                cv2.imshow('Morphing Preview', morphed if 'morphed' in locals() else frame)
+                if cv2.waitKey(1) & 0xFF == 27:  # ESC to cancel
+                    print("\nProcessing cancelled by user")
+                    break
+
+            except Exception as e:
+                print(f"Error processing frame {frame_count}: {e}")
+                out.write(frame)  # Write original frame on error
+
+    finally:
+        cap.release()
+        out.release()
+        cv2.destroyAllWindows()
+        print(f"\nProcessing complete. Output saved to {output_path}")
+
+
 def main():
     try:
-        tracker, target_img, target_points, morph_engine = init_components()
-        run_live_morph(tracker, target_img, target_points, morph_engine)
+        # For live webcam morphing:
+        # tracker, target_img, target_points, morph_engine = init_components()
+        # run_live_morph(tracker, target_img, target_points, morph_engine)
+        
+        # For video morphing:
+        morph_video(
+            source_path="assets/faces/source.jpeg",
+            video_path="input_video.mp4",  # Replace with your input video path
+            output_path="morphed_output.mp4",
+            alpha=0.5
+        )
     except Exception as e:
-        print(e)
-    # finally:
-    #     if "tracker" in locals() and tracker is not None:
-    #         tracker.release()
+        print(f"Error: {e}")
 
 
 if __name__ == "__main__":
