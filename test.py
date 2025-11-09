@@ -5,17 +5,14 @@ from morph.utils import FaceUtils
 import pyvirtualcam as pvc
 
 
-def test_static_morph():
+def test_static_morph(source_path, target_path):
     # Initialize classes
     utils = FaceUtils()
     morpher = FaceMorpher()
 
-    # Load images (make sure both are same size or will be resized)
-    src_path = "assets/faces/source.jpeg"
-    dst_path = "assets/faces/target.jpeg"
-
-    src_img = cv2.imread(src_path)
-    dst_img = cv2.imread(dst_path)
+    # Load images
+    src_img = cv2.imread(source_path)
+    dst_img = cv2.imread(target_path)
 
     if src_img is None or dst_img is None:
         print("[ERROR] Could not load one or both images.")

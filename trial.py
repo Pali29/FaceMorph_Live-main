@@ -12,12 +12,11 @@ import time
 faceutils = FaceUtils()
 
 
-def init_components():
-    target_path = "assets/faces/source.jpeg"
-    if not os.path.exists(target_path):
+def init_components(source_path):
+    if not os.path.exists(source_path):
         raise FileNotFoundError("no target detected")
 
-    target_img = cv2.imread(target_path)
+    target_img = cv2.imread(source_path)
     if target_img is None:
         raise ValueError("Error reading Image")
     target_img = cv2.cvtColor(target_img, cv2.COLOR_BGR2RGB)

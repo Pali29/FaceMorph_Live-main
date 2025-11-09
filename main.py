@@ -14,12 +14,11 @@ logger = logging.getLogger('vibe')
 
 faceutils = FaceUtils()
 
-def init_components():
-    target_path = "assets/Test1.jpg"
-    if not os.path.exists(target_path):
-        raise FileNotFoundError("no target detected")
+def init_components(source_path):
+    if not os.path.exists(source_path):
+        raise FileNotFoundError("Source image not found")
     
-    target_img = cv2.imread(target_path)
+    target_img = cv2.imread(source_path)
     if target_img is None:
         raise ValueError("Error reading Image")
     # keep as BGR here; FaceUtils.get_landmarks expects BGR and will convert internally
@@ -143,10 +142,12 @@ def task(cam, frame, target_img, target_points, morph_engine, alpha):
 
 
 
-def main():
+def main(source_path=None):
     try:
-        tracker, target_img, target_points, morph_engine = init_components()
-
+        if source_path is None:
+            raise ValueError("Source image path not provided")
+            
+        tracker, target_img, target_points, morph_engine = init_components(source_path)
         run_live_morph(tracker, target_img, target_points, morph_engine)
 
     except Exception as e:
