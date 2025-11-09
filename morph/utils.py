@@ -1,6 +1,9 @@
 import cv2
 import numpy as np
 import mediapipe as mp
+import logging
+
+logger = logging.getLogger('face_utils')
 
 class FaceUtils():
     def __init__(self):
@@ -18,6 +21,7 @@ class FaceUtils():
         if img is None:
             raise ValueError(f"could not load image: {path}")
         img = cv2.resize(img, size)
+        logger.info(f"read_image: loaded {path} resized to {size}")
         return img
     
     def get_landmarks(self, img):
@@ -30,6 +34,9 @@ class FaceUtils():
             for landmark in results.multi_face_landmarks[0].landmark:
                 x, y = int(landmark.x * w), int(landmark.y * h)
                 points.append((x, y))
+        logger.debug(f"get_landmarks: found {len(points)} landmarks")
+        if len(points) == 0:
+            logger.warning("get_landmarks: no face landmarks detected")
         
         return np.array(points, np.int32)
         
