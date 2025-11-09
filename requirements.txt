@@ -1,0 +1,8 @@
+Recommended Version:
+Python3.11.14
+
+Libraries:
+numpy, mediapipe, opencv-python, pyvirtualcam
+
+run:
+pip install numpy mediapipe opencv-python pyvirtualcam
